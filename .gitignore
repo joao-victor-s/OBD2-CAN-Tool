@@ -1,0 +1,42 @@
+# Build directories
+/out/
+build/
+cmake-build-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+CMakeLists.txt.user
+CMakePresets.json
+
+# Temporary or backup files
+*.tmp
+*.swp
+*.bak
+*.swo
+
+# Object and binary files
+*.o
+*.obj
+*.so
+*.dll
+*.exe
+*.a
+*.lib
+
+# Logs and debugging
+*.log
+*.dbg
+
+# Editor/IDE-specific files
+.vscode/
+.idea/
+*.iml
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+.vs/
