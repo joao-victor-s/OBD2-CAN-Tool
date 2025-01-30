@@ -6,7 +6,7 @@
 #include <map>
 using namespace std;
 
-#define OBD_TIMEOUT 2000 
+#define OBD_TIMEOUT 20
 
 //Responsabilidade: Implementar funcionalidades especificas do protocolo OBD2,
 // utilizando a comunicacao CAN fornecida pelo CANManager.
@@ -125,8 +125,9 @@ private:
     int timeout;                                    // Timeout para operacoes CAN
     static const map<PID, PIDInfo> pidMap;          // Mapa para associar PIDs as suas informações
                                                     //static -> imutavel em todas as instancias da classe
-   
-    
+
+
+  
     bool isValidPID(PID pid);                       // Validacao de PIDs
 
 public:
@@ -140,10 +141,10 @@ public:
     string getPIDUnit(int pidValue) const;
 
     float pidRead(PID pid);
-    void begin(CANManager * can, int time = OBD_TIMEOUT);
+    bool obdRead(uint8_t mode, uint8_t pid, char* buffer, size_t buffer_size);
 
 
-    string vinRead(CANManager* can, int time = OBD_TIMEOUT);               //Le o numero de identificação do veiculo (VIN - Vehicle Identification Number).
-    //string ecuNameRead();           //Le o nome da ECU (Electronic Control Unit).
+    string vinRead();               //Le o numero de identificação do veiculo (VIN - Vehicle Identification Number).
+    string ecuNameRead();                                                 //Le o nome da ECU (Electronic Control Unit).
 };
 

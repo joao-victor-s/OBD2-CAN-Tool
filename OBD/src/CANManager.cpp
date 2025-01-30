@@ -51,12 +51,13 @@ int CANManager::getSocket() const {
     return server_socket;
 }
 
-bool CANManager::readCANMessages(int time) {
-    
+can_frame CANManager::readCANMessages(int time) {
     struct can_frame recv_frame;
+    memset(&recv_frame, 0, sizeof(recv_frame));
+
     socklen_t len = sizeof(addr);
 
-    // Aplicacao de timeout para monitorar leitura CAN
+    //// Aplicacao de timeout para monitorar leitura CAN
     fd_set read_fds;
     FD_ZERO(&read_fds);
     FD_SET(server_socket, &read_fds);
@@ -71,9 +72,8 @@ bool CANManager::readCANMessages(int time) {
     if (ret == 0)
     {
         cerr << "Timeout atingido, nenhuma mensagem CAN detectada." << endl;
-        return false;
+        return recv_frame;
     }
-
 
     int nbytes = recvfrom(server_socket, &recv_frame, sizeof(struct can_frame), 0, (struct sockaddr*)&addr, &len);
 
@@ -81,92 +81,54 @@ bool CANManager::readCANMessages(int time) {
     ioctl(server_socket, SIOCGIFNAME, &ifr);
     cout << "CAN Frame recebido da interface " << ifr.ifr_name << endl;
 
-   if (nbytes < 0) {
-        perror("Erro no select()");
-   }
-   else if (nbytes == 0) {
-        cout << "Aguardando mensagens CAN..." << endl;
+    if (nbytes <= 0) {
+        cerr << "Erro ao receber frame CAN." << endl;
+    }
+    else {
+        cout << "Frame CAN recebido: ID=0x" << hex << recv_frame.can_id
+            << " DLC = " << dec << int(recv_frame.can_dlc) << " Dados = ";
+        for (int i = 0; i < recv_frame.can_dlc; ++i) {
+            cout << hex << int(recv_frame.data[i]) << " ";
+        }
+        cout << dec << endl;
     }
 
-    // Exibir a mensagem recebida
-    cout << "Mensagem CAN recebida: ID=0x" << hex << recv_frame.can_id
-         << " DLC=" << dec << int(recv_frame.can_dlc) << " Dados=";
+    return recv_frame;
 
-    for (int i = 0; i < recv_frame.can_dlc; ++i) {
-        cout << hex << int(recv_frame.data[i]) << " ";
+}
+
+bool CANManager::sendCANFrame(struct can_frame frame) const
+{    
+    socklen_t addr_len = sizeof(addr);
+
+    // Aplicacao de timeout para monitorar leitura CAN
+    fd_set write_fds;
+    FD_ZERO(&write_fds);
+    FD_SET(server_socket, &write_fds);
+
+    struct timeval timeout;
+    timeout.tv_sec = 6 / 1000;
+    timeout.tv_usec = 0;
+
+    // Monitoramento de Socket para avaliar disponibilidade de escrita
+    int ready = select(server_socket + 1, nullptr, &write_fds, nullptr, &timeout);
+
+    if (ready == 0) {
+        cout << "Timeout 60ms atingido para send." << endl;
+        return false;
     }
 
-    cout << dec << endl;
+    int nbytes = sendto(server_socket, &frame, sizeof(struct can_frame),
+        0, (struct sockaddr*)&addr, sizeof(addr));
+    
+    if (nbytes != sizeof(frame)) {
+        cerr << "Erro ao enviar frame CAN." << endl;
+        return false;
+    }
+
     return true;
-
 }
 
-void CANManager::sendCANMessage(uint8_t mode, uint8_t pid, const char * buffer, size_t buffer_size) const
-{
-    
-    struct can_frame send_can_frame;
-    socklen_t addr_len = sizeof(addr);
 
-    if (buffer_size > 5)
-        buffer_size = 5;                                                        // Limitador do buffer para CAN Classic
-
-    send_can_frame.can_id = 0x7DF;                                              // ID padrao para mensagens de solicitacao OBD-II
-    send_can_frame.can_dlc = 3 + buffer_size;                                   // Data Length Code fixado em 8 para mensagens CAN Classic
-
-    memset(send_can_frame.data, 0x00, sizeof(send_can_frame.data));             // Inicia os dados do frame zerados
-    send_can_frame.data[0] = 2 + buffer_size;                                   // Primeiro byte indica o numero de dados (2 + tamanho do buffer)
-    send_can_frame.data[1] = mode;                                              // modo de solicitacao PID
-    send_can_frame.data[2] = pid;                                               // PID solicitado
-
-    // Copia os dados adicionais do buffer para os campos adicionais
-    memcpy(&send_can_frame.data[3], buffer, buffer_size);
-
-    // Envia mensagens CAN
-    int nbytes = sendto(server_socket, &send_can_frame, sizeof(struct can_frame),
-        0, (struct sockaddr*)&addr, sizeof(addr));
-        
-
-    for (int i = 0; i < send_can_frame.len; ++i) {
-        cout << hex << int(send_can_frame.data[i]) << " ";
-    }
-
-    cout << dec << endl;
-    
-}
-
-void CANManager::sendCANFDMessage(uint8_t mode, uint8_t pid, const char* buffer, size_t buffer_size) const
-{
-    // Usa-se CAN FD para lidar com payloads maiores que 8 bytes
-    struct canfd_frame send_can_fd_frame;
-    socklen_t addr_len = sizeof(addr);
-
-    send_can_fd_frame.can_id = 0x7DF;                                           // ID padrao para mensagens de solicitacao OBD-II
-
-    // Limitador de tamanho do payload
-    if (buffer_size < 64)
-        send_can_fd_frame.len = buffer_size;                                     
-    else
-        send_can_fd_frame.len = 64;
-
-    memset(send_can_fd_frame.data, 0x00, sizeof(send_can_fd_frame.data));       // Inicia os dados do frame zerados
-    send_can_fd_frame.data[0] = 2 + buffer_size;                                // Primeiro byte indica o numero de dados (2 + tamanho do buffer)
-    send_can_fd_frame.data[1] = mode;                                           // Modo de solicitacao PID
-    send_can_fd_frame.data[2] = pid;                                            // PID solicitado
-
-    // Copia os dados adicionais do buffer para os campos adicionais
-    memcpy(&send_can_fd_frame.data[3], buffer, buffer_size);
-
-    // Envia mensagens CAN
-    int nbytes = sendto(server_socket, &send_can_fd_frame, sizeof(struct can_frame),
-        0, (struct sockaddr*)&addr, sizeof(addr));
-
-
-    for (int i = 0; i < send_can_fd_frame.len; ++i) {
-        cout << hex << int(send_can_fd_frame.data[i]) << " ";
-    }
-
-    cout << dec << endl;
-    
-}
 
 

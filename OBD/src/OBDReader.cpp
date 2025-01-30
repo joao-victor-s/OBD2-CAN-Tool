@@ -1,7 +1,11 @@
 #include "OBDReader.h"
 #include <cstdint>
+#include <chrono>
+#include <thread>
 
 
+using namespace std::this_thread; // sleep_for, sleep_until
+using namespace std::chrono; // nanoseconds, system_clock, seconds
 
 const map<PID, PIDInfo> OBDReader::pidMap = {
     { PID::PIDS_SUPPORT_01_20, { "PIDs supported [01 - 20]", "" } },
@@ -66,7 +70,11 @@ bool OBDReader::isValidPID(PID pid)
     return pidMap.find(pid) != pidMap.end();
 }
 
-OBDReader::OBDReader(CANManager* can, int time) : canManager(can), timeout(time) {};
+OBDReader::OBDReader(CANManager* can, int time) {
+    canManager = can;
+    timeout = time;
+    //can->readCANMessages(time);
+};
 
 OBDReader::~OBDReader() {};
 
@@ -267,11 +275,118 @@ float OBDReader::pidRead(PID pid)
 
 }
 
-void OBDReader::begin(CANManager* can, int time) {
-    can->readCANMessages(time);
+bool OBDReader::obdRead(uint8_t mode, uint8_t pid, char * buffer, size_t buffer_size)
+{
+   
+    struct can_frame out_frame;
+
+    out_frame.can_id = 0x7DF;                                              // ID padrao para mensagens de solicitacao OBD-II
+
+    out_frame.can_dlc = min(static_cast<uint8_t>(3 + buffer_size), static_cast<uint8_t>(8));
+                                                                            // Data Length Code fixado em 8 bytes para mensagens CAN Classic
+
+    memset(out_frame.data, 0x00, sizeof(out_frame.data));                   // Inicia os dados do frame zerados
+    out_frame.data[0] = 2 + buffer_size;                                   // Primeiro byte indica o numero de dados (2 + tamanho do buffer)
+    out_frame.data[1] = mode;                                              // modo de solicitacao PID
+    out_frame.data[2] = pid;                                               // PID solicitado
+
+
+    memcpy(&out_frame.data[3], buffer, buffer_size);                         // Copia os dados adicionais do buffer para os campos adicionais
+   
+    if(canManager->sendCANFrame(out_frame))
+        cout << "Frame enviado." << endl;
+    
+
+    /*
+        Estrutura frames CAN ISO 15765-2:  PCI (Protocol Control Information) 
+        0x00 a 0x07: Single Frame (SF)                  -> Mensagem em um unico frame
+        0x10 a 0x1F: First Frame (FF)                   -> Mensagem em multiplos frames (sendo esse o primeiro)
+        0x20 a 0x2F: Consecutive Frame (CF)             -> Mensagem em multiplos frames (sendo esse parte da mensagem)
+        0x30 a 0x3F: Flow Control Frame (FC)            -> Solicitacao de pacotes subsquentes de multiplos frames
+
+    */
+    
+
+    struct can_frame in_frame = canManager->readCANMessages(100000);
+    if (in_frame.can_dlc == 0) {
+        cerr << "Timeout ou nenhum frame recebido." << endl;
+        return false;
+    }
+
+    bool splitResponse = (in_frame.data[0] & 0xF0) == 0x10;
+
+    // CASO 1:
+    // Single Frame, analisa se a resposta a requisicao eh um unico frame com, as caracteristicas:
+    // data[0] = 0x00 a 0x07
+    // data[1] = (mode | 0x40) -> mode de requisicao 0x0. // mode de resposta 0x4.
+    // data[2] = pid
+    if (!splitResponse && in_frame.data[1] == (mode | 0x40) && in_frame.data[2] == pid) {
+        size_t data_length = min(buffer_size, static_cast<size_t>(in_frame.can_dlc - 3));
+        memcpy(buffer, &in_frame.data[3], data_length);
+        cout << "##############################################" << endl;
+        cout << "Single Frame recebido" << endl;
+        cout<< "Buffer = ";
+        for (int i = 0; i < data_length; i++)
+            cout << hex << int(buffer[i]) << " ";
+        cout << endl;
+        cout << "##############################################" << endl;
+        return true;
+    }
+
+
+    // CASO 2:
+    // First Frame, realiza a divisao de pacote utilizando as requisicoes 0x10 para primeiro elemento e 0x30 para obter os demais elementos do payload.
+    if (splitResponse) {
+        int total_data_len = in_frame.data[1];
+        int read = 0;
+
+        // Le os primeiros 3 bytes da mensagem
+        for (int i = 0; i < 3 && read < buffer_size; i++)
+        {
+            buffer[read++] = in_frame.data[i + 2];
+        }
+
+        while (read < (total_data_len-1))
+        {
+            struct can_frame flow_control;
+            flow_control.can_id = 0x7DF;
+            flow_control.can_dlc = 8;
+            memset(flow_control.data, 0x00, sizeof(flow_control.data));
+            flow_control.data[0] = 0x30;                                     // Flow Control para solicitar o proximo pacote.
+
+
+            if (!canManager->sendCANFrame(flow_control)) {
+                cerr << "Erro ao enviar Flow Control." << endl;
+                return false;
+            }
+
+            // Le o proximo frame
+            struct can_frame consecutive_frame = canManager->readCANMessages(60000);
+
+
+            if (consecutive_frame.data[0] == (0x21 + (read / 7))) {
+                cerr << "Sequencia de frames CAN atingida." << endl;
+                // Copia os dados do frame consecutivo para o buffer
+                for (int i = 0; i < 7 && read < buffer_size; i++) {
+                    buffer[read++] = consecutive_frame.data[i + 1];
+                }
+            }
+        }
+        cout << "##############################################" << endl;
+        cout << "First Frame completo recebido" << endl;
+        cout << "Buffer = ";
+        for (int i = 0; i < total_data_len; i++)
+            cout << hex << int(buffer[i]) << " ";
+        cout << endl;
+        cout << "##############################################" << endl;
+        return true; 
+
+    }
+ 
+    return false;
 }
 
-string OBDReader::vinRead(CANManager* can, int time)
+string OBDReader::vinRead()
 {
     /*
     Exemplo de Payload VCAN:
@@ -285,11 +400,23 @@ string OBDReader::vinRead(CANManager* can, int time)
     */ 
     char vin[18] = { 0 };                                       // array de 4 elementos do tipo uint8_t (cada elemento com 8 bits ou 1 byte)
 
+    if (!obdRead(0x09, 0x02, vin, sizeof(vin))) {
+        cerr << "Erro ao ler o VIN." << endl;
+        return "";
+    }
 
-    can->sendCANMessage(0x09, 0x02, vin, sizeof(vin));
-
-    return vin;
+    return string(vin);
 }
 
+string OBDReader::ecuNameRead()
+{
+    char ecuName[21] = { 0 };
 
+    if (!obdRead(0x09, 0x0a, ecuName, sizeof(ecuName)))
+    {
+        cerr << "Erro ao ler ECU Name." << endl;
+        return "";
+    }
 
+    return ecuName;
+}

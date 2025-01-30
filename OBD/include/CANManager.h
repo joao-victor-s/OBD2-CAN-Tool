@@ -27,9 +27,8 @@ public:
     ~CANManager();
 
     bool initialize();
-    bool readCANMessages(int time);
-    void sendCANMessage(uint8_t mode, uint8_t pid, const char* buffer, size_t buffer_size) const;
-    void sendCANFDMessage(uint8_t mode, uint8_t pid, const char* buffer, size_t buffer_size) const;
+    can_frame readCANMessages(int time);
+    bool sendCANFrame(struct can_frame frame) const;
 
     int getSocket() const;
 };

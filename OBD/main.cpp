@@ -15,18 +15,14 @@ using namespace std;
 
 int main()
 {
-
 	CANManager manager(CAN_INTERFACE);
-
 	manager.initialize();
-	cout << "Socket CAN: " << manager.getSocket() << endl;
 
 	OBDReader obd(&manager);
-	obd.begin(&manager);
-	obd.vinRead(&manager);
-	
+	obd.vinRead();
+	//obd.ecuNameRead();
+
 
 	return 0;
 
 }
-
