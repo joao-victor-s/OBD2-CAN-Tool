@@ -1,35 +1,35 @@
-# **Comunicação OBD-II via CAN**
+# **ComunicaÃ§Ã£o OBD-II via CAN**
 
-## **Visão Geral**
-Este projeto implementa um sistema de comunicação OBD-II utilizando a rede CAN (Controller Area Network), permitindo a troca de informações entre um leitor OBD-II e uma ECU simulada. O objetivo é testar e validar a comunicação CAN sem a necessidade de um veículo real, utilizando um ambiente virtual.
+## **VisÃ£o Geral**
+Este projeto implementa um sistema de comunicaÃ§Ã£o OBD-II utilizando a rede CAN (Controller Area Network), permitindo a troca de informaÃ§Ãµes entre um leitor OBD-II e uma ECU simulada. O objetivo Ã© testar e validar a comunicaÃ§Ã£o CAN sem a necessidade de um veÃ­culo real, utilizando um ambiente virtual.
 
-A aplicação é dividida em três componentes principais:
-1. **CANManager** – Gerencia a comunicação CAN, enviando e recebendo mensagens.
-2. **OBDReader** – Solicita informações da ECU simulada via protocolo OBD-II.
-3. **Simulator** – Simula uma ECU, respondendo às mensagens enviadas pelo OBDReader.
+A aplicaÃ§Ã£o Ã© dividida em trÃªs componentes principais:
+1. **CANManager** â€“ Gerencia a comunicaÃ§Ã£o CAN, enviando e recebendo mensagens.
+2. **OBDReader** â€“ Solicita informaÃ§Ãµes da ECU simulada via protocolo OBD-II.
+3. **Simulator** â€“ Simula uma ECU, respondendo Ã s mensagens enviadas pelo OBDReader.
 
 ---
 
 ## **Estrutura do Projeto**
 ```
 OBD/
-??? include/                  # Arquivos de cabeçalho
-?   ??? CANManager.h          # Gerenciamento da comunicação CAN
-?   ??? OBDReader.h           # Leitura de dados OBD-II
-??? src/                      # Implementação dos módulos principais
-?   ??? CANManager.cpp        # Envio e recepção de mensagens CAN
-?   ??? OBDReader.cpp         # Interação com a ECU via OBD-II
-??? simulator/                # Código do simulador de ECU
-?   ??? simulator.cpp         # Simulação de respostas OBD-II
-??? CMakeLists.txt            # Arquivo de configuração do CMake
-??? main.cpp                  # Código principal para leitura OBD-II
-??? README.md                 # Documentação do projeto
+â”‚â”€â”€ include/                  # Arquivos de cabeÃ§alho
+â”‚   â”œâ”€â”€ CANManager.h          # Gerenciamento da comunicaÃ§Ã£o CAN
+â”‚   â”œâ”€â”€ OBDReader.h           # Leitura de dados OBD-II
+â”‚â”€â”€ src/                      # ImplementaÃ§Ã£o dos mÃ³dulos principais
+â”‚   â”œâ”€â”€ CANManager.cpp        # Envio e recepÃ§Ã£o de mensagens CAN
+â”‚   â”œâ”€â”€ OBDReader.cpp         # InteraÃ§Ã£o com a ECU via OBD-II
+â”‚â”€â”€ simulator/                # CÃ³digo do simulador de ECU
+â”‚   â”œâ”€â”€ simulator.cpp         # SimulaÃ§Ã£o de respostas OBD-II
+â”‚â”€â”€ CMakeLists.txt            # Arquivo de configuraÃ§Ã£o do CMake
+â”‚â”€â”€ main.cpp                  # CÃ³digo principal para leitura OBD-II
+â”‚â”€â”€ README.md                 # DocumentaÃ§Ã£o do projeto
 ```
 
 ---
 
 ## **Como Configurar e Executar**
-### **1. Instalar Dependências**
+### **1. Instalar DependÃªncias**
 Antes de rodar o projeto, certifique-se de ter instalado:
 - **CMake** (`sudo apt install cmake`)
 - **G++** (`sudo apt install g++`)
@@ -42,7 +42,7 @@ sudo modprobe vcan
 sudo ip link add dev vcan0 type vcan
 sudo ip link set up vcan0
 ```
-Isso criará uma interface chamada **vcan0**, que será usada para a comunicação CAN virtual.
+Isso criarÃ¡ uma interface chamada **vcan0**, que serÃ¡ usada para a comunicaÃ§Ã£o CAN virtual.
 
 ### **3. Compilar o Projeto**
 No terminal, execute:
@@ -51,47 +51,47 @@ mkdir build && cd build
 cmake ..
 make
 ```
-Isso gerará os executáveis necessários para rodar os testes.
+Isso gerarÃ¡ os executÃ¡veis necessÃ¡rios para rodar os testes.
 
-### **4. Executar a Simulação**
+### **4. Executar a SimulaÃ§Ã£o**
 1. **Rodar o simulador de ECU**:
 ```bash
 ./simulator
 ```
-Isso inicia um sistema que responde às mensagens OBD-II simulando uma ECU real.
+Isso inicia um sistema que responde Ã s mensagens OBD-II simulando uma ECU real.
 
 2. **Rodar o leitor OBD-II**:
 ```bash
 ./OBD
 ```
-Aqui, o sistema OBDReader enviará requisições à ECU simulada e processará as respostas.
+Aqui, o sistema OBDReader enviarÃ¡ requisiÃ§Ãµes Ã  ECU simulada e processarÃ¡ as respostas.
 
 ---
 
 ## **Funcionamento do Projeto**
 ### **CANManager**
-- Responsável por inicializar a interface CAN, enviar e receber mensagens.
-- Estabelece um **socket CAN** para comunicação entre dispositivos.
+- ResponsÃ¡vel por inicializar a interface CAN, enviar e receber mensagens.
+- Estabelece um **socket CAN** para comunicaÃ§Ã£o entre dispositivos.
 - Gerencia **timeouts** para garantir respostas dentro do tempo esperado.
 
 ### **OBDReader**
-- Solicita **PIDs OBD-II** (Parâmetros de Diagnóstico) para obter dados do veículo.
-- Verifica se a resposta vem em um **Single Frame** (resposta única) ou em **First Frame + Consecutive Frames** (respostas fragmentadas).
+- Solicita **PIDs OBD-II** (ParÃ¢metros de DiagnÃ³stico) para obter dados do veÃ­culo.
+- Verifica se a resposta vem em um **Single Frame** (resposta Ãºnica) ou em **First Frame + Consecutive Frames** (respostas fragmentadas).
 - Processa as respostas da ECU simulada e retorna os valores solicitados.
 
 ### **Simulator**
 - Atua como uma ECU, escutando as mensagens recebidas via **CAN** e respondendo conforme o protocolo OBD-II.
 - Suporta dois tipos de resposta:
-  - **Single Frame (SF):** Quando a resposta cabe em um único pacote CAN.
-  - **First Frame (FF) + Consecutive Frames (CF):** Para respostas que excedem o tamanho de um único frame, exigindo múltiplas mensagens.
+  - **Single Frame (SF):** Quando a resposta cabe em um Ãºnico pacote CAN.
+  - **First Frame (FF) + Consecutive Frames (CF):** Para respostas que excedem o tamanho de um Ãºnico frame, exigindo mÃºltiplas mensagens.
 
 ---
 
-## **Fluxo de Comunicação**
-1. O **OBDReader** envia uma solicitação CAN para a ECU simulada (**Simulator**).  
-2. O **Simulator** processa a requisição e responde com os dados solicitados.  
-3. Se os dados couberem em um único frame CAN, o **Simulator** envia um **Single Frame (SF)**.  
+## **Fluxo de ComunicaÃ§Ã£o**
+1. O **OBDReader** envia uma solicitaÃ§Ã£o CAN para a ECU simulada (**Simulator**).  
+2. O **Simulator** processa a requisiÃ§Ã£o e responde com os dados solicitados.  
+3. Se os dados couberem em um Ãºnico frame CAN, o **Simulator** envia um **Single Frame (SF)**.  
 4. Se os dados forem grandes, o **Simulator** inicia um **First Frame (FF)** e espera um **Flow Control (FC)** do OBDReader.  
-5. Após receber o **Flow Control**, o **Simulator** envia os **Consecutive Frames (CF)** até completar a resposta.  
-6. O **OBDReader** lê os dados e os exibe no terminal.  
+5. ApÃ³s receber o **Flow Control**, o **Simulator** envia os **Consecutive Frames (CF)** atÃ© completar a resposta.  
+6. O **OBDReader** lÃª os dados e os exibe no terminal.  
 
