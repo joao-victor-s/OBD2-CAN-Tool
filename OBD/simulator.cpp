@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#define CAN_INTERFACE "vcan0" // Nome da interface CAN virtual
+#define CAN_INTERFACE "vcan0" 
 
 using namespace std;
 
@@ -14,7 +14,7 @@ int main() {
 
 	string user_choice;
 	cout << "Simular Single Frame (SF) ou First Frame (FF)? ";
-	cin >> user_choice;  // Corrigido erro na entrada de dados
+	cin >> user_choice;  
 	
 	struct can_frame recv_simulator = simulator.readCANMessages(10000);;
 
@@ -28,10 +28,10 @@ int main() {
 
 		send_sf.can_id = 0x7E8;
 		send_sf.can_dlc = 8;
-		send_sf.data[0] = 0x07;  // Single Frame indicando resposta única
+		send_sf.data[0] = 0x07;  
 		send_sf.data[1] = (recv_simulator.data[1] | 0x40);  // Resposta ao modo recebido
 		send_sf.data[2] = recv_simulator.data[2];  // PID solicitado
-		send_sf.data[3] = 0x44;  // Dado fictício
+		send_sf.data[3] = 0x44; 
 		send_sf.data[4] = 0x12;
 		send_sf.data[5] = 0x34;
 		send_sf.data[6] = 0x56;
@@ -45,7 +45,7 @@ int main() {
 		struct can_frame send_ff;
 
 		send_ff.can_id = 0x7E8;
-		send_ff.can_dlc = 8;  // Tamanho máximo permitido para CAN clássico
+		send_ff.can_dlc = 8;  
 		send_ff.data[0] = 0x10; // First Frame
 		send_ff.data[1] = 0x12; // Tamanho total da resposta
 		send_ff.data[2] = 0x35;
