@@ -95,3 +95,13 @@ Aqui, o sistema OBDReader enviará requisições à ECU simulada e processará a
 5. Após receber o **Flow Control**, o **Simulator** envia os **Consecutive Frames (CF)** até completar a resposta.  
 6. O **OBDReader** lê os dados e os exibe no terminal.  
 
+
+## Futuras Melhorias
+
+Este projeto está em desenvolvimento e novas funcionalidades estão sendo planejadas para aumentar a eficiência da comunicação CAN e a robustez do leitor OBD-II. Algumas melhorias previstas incluem:
+
+- **Implementação de multithreading** para leitura e escrita simultânea de mensagens CAN, permitindo uma comunicação mais eficiente sem bloqueios.  
+- **Otimização do gerenciamento de buffers CAN**, reduzindo a latência na recepção e envio de pacotes.  
+- **Melhoria na detecção e tratamento de erros**, garantindo que mensagens inválidas ou com falha de sequência sejam corretamente descartadas e retransmitidas quando necessário.  
+- **Implementação de logs e debugging avançado**, facilitando a análise de falhas no fluxo de mensagens CAN.  
+- **Suporte a mais PIDs OBD-II**, expandindo a compatibilidade com diferentes ECUs e veículos.  
